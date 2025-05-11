@@ -1,4 +1,4 @@
-import { CentercomData, TransformedData } from '@/types'
+import { CentercomData, PcCaseGearData, TransformedData } from '@/types'
 import { capitalizeFirstLetter, transformCentercomData, transformPcCasegearData } from '@/utils'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -41,7 +41,8 @@ export default async function Home() {
       const data = await response.json()
 
       return data.results[0].hits.sort(
-        (a: any, b: any) => Number(a.gtmProducts.price) - Number(b.gtmProducts.price)
+        (a: PcCaseGearData, b: PcCaseGearData) =>
+          Number(a.gtmProducts.price) - Number(b.gtmProducts.price)
       )
     } catch (error) {
       console.log(error)

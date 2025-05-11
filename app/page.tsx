@@ -1,103 +1,109 @@
-import Image from "next/image";
+import { CentercomData, TransformedData } from '@/types'
+import { capitalizeFirstLetter, transformCentercomData, transformPcCasegearData } from '@/utils'
+import Image from 'next/image'
+import Link from 'next/link'
 
-export default function Home() {
+export default async function Home() {
+  const getCentercomData = async () => {
+    try {
+      const response = await fetch(
+        'https://computerparts.centrecom.com.au/api/search?cid=0ae1fd6a074947699fbe46df65ee5714&q=9070xt'
+      )
+
+      if (!response.ok) throw new Error('Failed to fetch centercom data')
+
+      const data = await response.json()
+
+      return data.p.sort((a: CentercomData, b: CentercomData) => Number(a.price) - Number(b.price))
+    } catch (error) {
+      console.log(error)
+      return []
+    }
+  }
+
+  const getPcCasegearData = async () => {
+    try {
+      const response = await fetch(
+        'https://hpd3dbj2io-dsn.algolia.net/1/indexes/*/queries?x-algolia-agent=Algolia%20for%20JavaScript%20(3.35.1)%3B%20Browser%20(lite)&x-algolia-application-id=HPD3DBJ2IO&x-algolia-api-key=9559cf1a6c7521a30ba0832ec6c38499',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            requests: [{ indexName: 'pccg_products', params: 'query=9070xt' }],
+          }),
+        }
+      )
+
+      if (!response.ok) throw new Error('Failed to fetch pccasegear data')
+
+      const data = await response.json()
+
+      return data.results[0].hits.sort(
+        (a: any, b: any) => Number(a.gtmProducts.price) - Number(b.gtmProducts.price)
+      )
+    } catch (error) {
+      console.log(error)
+      return []
+    }
+  }
+
+  const centercomData = transformCentercomData(await getCentercomData())
+  const pcCasegearData = transformPcCasegearData(await getPcCasegearData())
+
+  const allData = [...centercomData, ...pcCasegearData].sort(
+    (a, b) => Number(a.price) - Number(b.price)
+  )
+
+  const priceColor = (price: number) =>
+    price < 1300 ? 'bg-green-500/30' : price < 1350 ? 'bg-orange-500/30' : 'bg-red-500/30'
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className="p-10 max-w-screen-2xl m-auto">
+      <div className="flex flex-col gap-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          {allData.map(
+            ({ imgUrl, isInStock, storeImgUrl, url, ...item }: TransformedData, index) => (
+              <div
+                key={`${index}-${item.name}`}
+                className={`flex flex-col gap-2 p-5 rounded-md ${priceColor(
+                  Number(item.price)
+                )} bg-opacity-50 ${isInStock ? 'opacity-100' : 'opacity-30'}`}
+              >
+                <Image src={storeImgUrl} alt={item.name} height={20} width={150} />
+                <div className="flex flex-col">
+                  {Object.entries(item).map(([key, value]) => {
+                    return (
+                      <div key={key} className="flex gap-3">
+                        <p className="font-bold text-sm">{capitalizeFirstLetter(key)}</p>:
+                        <p className="text-sm">{value}</p>
+                      </div>
+                    )
+                  })}
+                </div>
+                <Image
+                  src={imgUrl}
+                  alt={item.name}
+                  height={200}
+                  width={200}
+                  className="rounded-md"
+                />
+                {url && (
+                  <Link
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-black p-2 rounded-md w-fit px-5 py-1"
+                  >
+                    Link
+                  </Link>
+                )}
+              </div>
+            )
+          )}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </div>
     </div>
-  );
+  )
 }

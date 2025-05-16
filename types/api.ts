@@ -61,3 +61,10 @@ export interface PcCaseGearData {
     variant: string
   }
 }
+
+export interface ScorptecData {
+  name: string
+  price: number
+  imgUrl: string
+  isInStock: boolean
+}

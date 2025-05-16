@@ -1,4 +1,4 @@
-import { CentercomData, PcCaseGearData, TransformedData } from '@/types/api'
+import { CentercomData, PcCaseGearData, ScorptecData, TransformedData } from '@/types/api'
 
 export const transformPcCasegearData = (data: PcCaseGearData[]): TransformedData[] =>
   data.map(item => ({
@@ -18,4 +18,13 @@ export const transformCentercomData = (data: CentercomData[]): TransformedData[]
     imgUrl: item.imgUrl,
     isInStock: item.stockAvailability > 0,
     storeImgUrl: 'https://www.centrecom.com.au/Content/Images/cc-logo.svg',
+  }))
+
+export const transformScorptecData = (data: ScorptecData[]): TransformedData[] =>
+  data.map(item => ({
+    name: item.name,
+    price: item.price,
+    imgUrl: item.imgUrl,
+    isInStock: item.isInStock,
+    storeImgUrl: '/scorptec-logo.svg',
   }))

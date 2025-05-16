@@ -2,25 +2,35 @@ import puppeteer from 'puppeteer'
 import { fileURLToPath } from 'url'
 import { transformScorptecData } from '@/utils'
 
+class ScrapingError extends Error {
+  constructor(message, type, details = {}) {
+    super(message)
+    this.name = 'ScrapingError'
+    this.type = type
+    this.details = details
+  }
+}
+
 export async function scrapeScorptec() {
   const isMainModule = process.argv[1] === fileURLToPath(import.meta.url)
   console.log('Launching browser in', isMainModule ? 'visible' : 'headless', 'mode')
 
-  const browser = await puppeteer.launch({
-    headless: 'new',
-    defaultViewport: null,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-accelerated-2d-canvas',
-      '--disable-gpu',
-      '--window-size=1920x1080',
-    ],
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-  })
-
+  let browser
   try {
+    browser = await puppeteer.launch({
+      headless: 'new',
+      defaultViewport: null,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--disable-gpu',
+        '--window-size=1920x1080',
+      ],
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+    })
+
     const page = await browser.newPage()
 
     // Set a realistic user agent
@@ -30,19 +40,29 @@ export async function scrapeScorptec() {
 
     console.log('Navigating to Scorptec page...')
 
-    // Navigate with optimized timeout
-    await page.goto('https://www.scorptec.com.au/product/graphics-cards/radeonrx9070xt', {
-      waitUntil: 'domcontentloaded',
-      timeout: 30000,
-    })
+    try {
+      // Navigate with optimized timeout
+      await page.goto('https://www.scorptec.com.au/product/graphics-cards/radeonrx9070xt', {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000,
+      })
+    } catch (error) {
+      throw new ScrapingError('Failed to navigate to Scorptec page', 'NAVIGATION_ERROR', {
+        originalError: error.message,
+      })
+    }
 
     console.log('Page loaded, waiting for content...')
 
-    // Wait for the product grid to be present with longer timeout
-    await page.waitForSelector('#product-list-grid-wrapper', { timeout: 10000 }).catch(error => {
-      console.error('Failed to find product grid:', error)
-      throw new Error('Product grid not found after timeout')
-    })
+    try {
+      // Wait for the product grid to be present with longer timeout
+      await page.waitForSelector('#product-list-grid-wrapper', { timeout: 10000 })
+    } catch (error) {
+      throw new ScrapingError('Product grid not found after timeout', 'SELECTOR_ERROR', {
+        selector: '#product-list-grid-wrapper',
+        originalError: error.message,
+      })
+    }
 
     // Reduced delay for dynamic content
     await new Promise(resolve => setTimeout(resolve, 2000))
@@ -51,8 +71,7 @@ export async function scrapeScorptec() {
     const productData = await page.evaluate(() => {
       const parent = document.getElementById('product-list-grid-wrapper')
       if (!parent) {
-        console.log('Parent element not found in evaluate')
-        return []
+        throw new Error('Parent element not found in evaluate')
       }
 
       const items = Array.from(parent.children)
@@ -85,7 +104,7 @@ export async function scrapeScorptec() {
     })
 
     if (!productData || productData.length === 0) {
-      throw new Error('No product data found')
+      throw new ScrapingError('No product data found', 'DATA_ERROR')
     }
 
     console.log('Scraped data:', productData)
@@ -93,10 +112,19 @@ export async function scrapeScorptec() {
     const transformedData = transformScorptecData(productData)
     return transformedData
   } catch (error) {
-    console.error('An error occurred during scraping:', error)
-    throw new Error(`Scraping failed: ${error.message}`)
+    // If it's already a ScrapingError, just rethrow it
+    if (error instanceof ScrapingError) {
+      throw error
+    }
+
+    // Otherwise, wrap it in a ScrapingError
+    throw new ScrapingError('An error occurred during scraping', 'UNKNOWN_ERROR', {
+      originalError: error.message,
+    })
   } finally {
-    await browser.close()
+    if (browser) {
+      await browser.close()
+    }
   }
 }
 
@@ -110,7 +138,12 @@ if (isMainModule) {
       process.exit(0)
     })
     .catch(error => {
-      console.error('Scraping failed:', error)
+      console.error('Scraping failed:', {
+        message: error.message,
+        type: error.type,
+        details: error.details,
+        stack: error.stack,
+      })
       process.exit(1)
     })
 }

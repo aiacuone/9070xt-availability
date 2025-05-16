@@ -7,9 +7,17 @@ export async function scrapeScorptec() {
   console.log('Launching browser in', isMainModule ? 'visible' : 'headless', 'mode')
 
   const browser = await puppeteer.launch({
-    headless: isMainModule ? false : 'new',
+    headless: 'new',
     defaultViewport: null,
-    args: ['--start-maximized', '--no-sandbox', '--disable-setuid-sandbox'],
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
+      '--disable-gpu',
+      '--window-size=1920x1080',
+    ],
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
   })
 
   try {
@@ -25,15 +33,16 @@ export async function scrapeScorptec() {
     // Navigate with optimized timeout
     await page.goto('https://www.scorptec.com.au/product/graphics-cards/radeonrx9070xt', {
       waitUntil: 'domcontentloaded',
-      timeout: 15000,
+      timeout: 30000,
     })
 
     console.log('Page loaded, waiting for content...')
 
-    // Wait for the product grid to be present with shorter timeout
-    await page
-      .waitForSelector('#product-list-grid-wrapper', { timeout: 5000 })
-      .catch(() => console.log('Product grid wrapper not found'))
+    // Wait for the product grid to be present with longer timeout
+    await page.waitForSelector('#product-list-grid-wrapper', { timeout: 10000 }).catch(error => {
+      console.error('Failed to find product grid:', error)
+      throw new Error('Product grid not found after timeout')
+    })
 
     // Reduced delay for dynamic content
     await new Promise(resolve => setTimeout(resolve, 2000))
@@ -75,14 +84,17 @@ export async function scrapeScorptec() {
       })
     })
 
+    if (!productData || productData.length === 0) {
+      throw new Error('No product data found')
+    }
+
     console.log('Scraped data:', productData)
 
     const transformedData = transformScorptecData(productData)
-
     return transformedData
   } catch (error) {
-    console.error('An error occurred:', error)
-    throw error
+    console.error('An error occurred during scraping:', error)
+    throw new Error(`Scraping failed: ${error.message}`)
   } finally {
     await browser.close()
   }

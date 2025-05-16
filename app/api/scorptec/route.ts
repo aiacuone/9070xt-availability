@@ -5,8 +5,14 @@ export async function GET() {
   try {
     const data = await scrapeScorptec()
     return NextResponse.json(data)
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error scraping Scorptec:', error)
-    return NextResponse.json({ error: 'Failed to scrape Scorptec' }, { status: 500 })
+    return NextResponse.json(
+      {
+        error: 'Failed to scrape Scorptec',
+        details: error?.message || 'Unknown error occurred',
+      },
+      { status: 500 }
+    )
   }
 }

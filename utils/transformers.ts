@@ -12,11 +12,11 @@ export const transformPcCasegearData = (data: PcCaseGearData[]): TransformedData
   }))
 
 export const transformCentercomData = (data: CentercomData[]): TransformedData[] =>
-  data.map((item: any) => ({
+  data.map(item => ({
     name: item.name,
     price: item.price,
     imgUrl: item.imgUrl,
-    isInStock: item.stockAvailability > 0,
+    isInStock: item.stockAvailability === 'IN STOCK',
     storeImgUrl: 'https://www.centrecom.com.au/Content/Images/cc-logo.svg',
   }))
 

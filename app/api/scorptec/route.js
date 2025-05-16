@@ -5,7 +5,7 @@ export async function GET() {
   try {
     const data = await scrapeScorptec()
     return NextResponse.json(data)
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error scraping Scorptec:', error)
     return NextResponse.json(
       {

@@ -1,0 +1,9 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "true"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs" 

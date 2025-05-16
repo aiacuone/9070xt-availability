@@ -22,6 +22,6 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "api/index.js", "utils/strings.js", "utils/index.js", "app/api/scorptec/route.js", "app/api/pccasegear/route.js", "app/api/centercom/route.js"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "api/index.js", "utils/strings.js", "utils/index.js", "app/api/pccasegear/route.js", "app/api/centercom/route.js"],
   "exclude": ["node_modules"]
 }

@@ -25,7 +25,7 @@ export default function Home() {
           console.error('Error fetching pcCasegear data:', err)
           return []
         })
-      const scorptecData = await fetch('/api/scorptec')
+      const scorptecData = await fetch('/.netlify/functions/scorptec')
         .then(res => res.json())
         .catch(err => {
           console.error('Error fetching scorptec data:', err)
